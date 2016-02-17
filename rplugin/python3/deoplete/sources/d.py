@@ -8,11 +8,6 @@ from .base import Base
 from deoplete.util import charpos2bytepos
 from deoplete.util import error
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-ujson_dir = os.path.dirname(current_dir)
-sys.path.insert(0, ujson_dir)
-
-
 class Source(Base):
     def __init__(self, vim):
         Base.__init__(self, vim)
@@ -20,7 +15,7 @@ class Source(Base):
         self.name = 'd'
         self.mark = '[d]'
         self.filetypes = ['d']
-        self.input_pattern = r'(?:\b[^\W\d]\w*|[\]\)])\.(?:[^\W\d]\w*)?'
+        self.input_pattern = r'(?:\b[^\W\d]\w*|[\]\)])(?:\.(?:[^\W\d]\w*)?)*'
         self.rank = 500
         self.class_dict = {
             'c': 'class', # - class name
@@ -44,6 +39,7 @@ class Source(Base):
 
         self._dcd_client_binary = self.vim.vars['deoplete#sources#d#dcd_client_binary']
         self._dcd_server_binary = self.vim.vars['deoplete#sources#d#dcd_server_binary']
+
         if self.vim.vars['deoplete#sources#d#dcd_server_autostart'] == 1:
             process = subprocess.Popen([self.dcd_server_binary()], start_new_session=True)
 
@@ -61,8 +57,7 @@ class Source(Base):
         source = '\n'.join(buf).encode()
 
         process = subprocess.Popen([self.dcd_client_binary(),
-                                    '-c' + str(offset),
-                                    buf.name,],
+                                    '-c' + str(offset)],
                                    stdin=subprocess.PIPE,
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE,
