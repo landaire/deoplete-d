@@ -23,4 +23,3 @@ on your system. This is optional and will be found in your `$PATH` if not set
 
 `let g:deoplete#sources#d#dcd_server_autostart = 1` - whether or not `dcd-server`
 should be auto-started
-
