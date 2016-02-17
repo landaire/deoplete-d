@@ -23,8 +23,10 @@ class Source(Base):
         self.input_pattern = r'(?:\b[^\W\d]\w*|[\]\)])\.(?:[^\W\d]\w*)?'
         self.rank = 500
 
-        self.dcd_client_binary = self.vim.vars['deoplete#sources#d#dcd_client_binary']
-        self.dcd_server_binary = self.vim.vars['deoplete#sources#d#dcd_server_binary']
+        self._dcd_client_binary = self.vim.vars['deoplete#sources#d#dcd_client_binary']
+        self._dcd_server_binary = self.vim.vars['deoplete#sources#d#dcd_server_binary']
+        if self.vim.vars['deoplete#sources#d#dcd_server_autostart']:
+            process = subprocess.Popen([self.dcd_server_binary], start_new_session=True)
 
     def get_complete_position(self, context):
         m = re.search(r'\w*$', context['input'])
@@ -39,7 +41,7 @@ class Source(Base):
             charpos2bytepos(self.vim, context['input'][: column], column) - 1
         source = '\n'.join(buf).encode()
 
-        process = subprocess.Popen([self.DcdClientBinary(),
+        process = subprocess.Popen([self.dcd_client_binary(),
                                     '-c' + str(offset),
                                     buf.name,],
                                    stdin=subprocess.PIPE,
@@ -74,15 +76,14 @@ class Source(Base):
             # }
         if result[0] == "identifiers":
             return self.identifiers_from_result(result)
+        elif result[0] ==  "calltips":
+            return self.calltips_from_result(result)
 
         return []
 
     def identifiers_from_result(self, result):
         out = []
         sep = ' '
-        # We didn't get identifiers for some reason
-        if result[0] != "identifiers":
-            return out
 
         for complete in result[1:]:
             if complete.strip() == '':
@@ -106,25 +107,41 @@ class Source(Base):
 
         return out
 
-    def DcdClientBinary(self):
+    def calltips_from_result(self, result):
+        out = []
+
+        result = result[1]
+
+        word = result.split(" ")
+        word = word[1]
+        word = word[:word.find('(')]
+
+        out.append(dict(
+                word=word,
+                info=result
+            ))
+
+        return out
+
+    def dcd_client_binary(self):
         try:
-            if os.path.isfile(self.dcd_client_binary):
-                return self.dcd_client_binary
+            if os.path.isfile(self._dcd_client_binary):
+                return self._dcd_client_binary
             else:
                 raise
         except Exception:
-            return self.FindBinaryPath('dcd-client')
+            return self.find_binary_path('dcd-client')
 
-    def DcdServerBinary(self):
+    def dcd_server_binary(self):
         try:
-            if os.path.isfile(self.dcd_server_binary):
-                return self.dcd_server_binary
+            if os.path.isfile(self._dcd_server_binary):
+                return self._dcd_server_binary
             else:
                 raise
         except Exception:
-            return self.FindBinaryPath('dcd-server')
+            return self.find_binary_path('dcd-server')
 
-    def FindBinaryPath(self, cmd):
+    def find_binary_path(self, cmd):
         def is_exec(fpath):
             return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
@@ -139,3 +156,4 @@ class Source(Base):
                 if is_exec(binary):
                     return binary
         return error(self.vim, cmd + ' binary not found')
+
