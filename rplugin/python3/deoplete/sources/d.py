@@ -22,6 +22,25 @@ class Source(Base):
         self.filetypes = ['d']
         self.input_pattern = r'(?:\b[^\W\d]\w*|[\]\)])\.(?:[^\W\d]\w*)?'
         self.rank = 500
+        self.class_dict = {
+            'c': 'class', # - class name
+            'i': 'interface', # - interface name
+            's': 'struct', # - struct name
+            'u': 'union', # - union name
+            'v': 'var', # - variable name
+            'm': 'var', # - member variable name
+            'k': 'keyword', # - keyword, built-in version, scope statement
+            'f': 'function', # - function or method
+            'g': 'enum', # - enum name
+            'e': 'enum', # - enum member
+            'P': 'package', # - package name
+            'M': 'module', # - module name
+            'a': 'array', # - array
+            'A': 'aarray', # - associative array
+            'l': 'alias', # - alias name
+            't': 'template', # - template name
+            'T': 'mixin template', # - mixin template name
+        }
 
         self._dcd_client_binary = self.vim.vars['deoplete#sources#d#dcd_client_binary']
         self._dcd_server_binary = self.vim.vars['deoplete#sources#d#dcd_server_binary']
@@ -52,28 +71,6 @@ class Source(Base):
         stdout_data, stderr_data = process.communicate()
         result = stdout_data.decode().split('\n')
 
-        # if not self.sort_class == []:
-            # # TODO(zchee): Why not work with this?
-            # #              class_dict = {}.fromkeys(self.sort_class, [])
-            # class_dict = {
-                    # 'c': [], # - class name
-                    # 'i': [], # - interface name
-                    # 's': [], # - struct name
-                    # 'u': [], # - union name
-                    # 'v': [], # - variable name
-                    # 'm': [], # - member variable name
-                    # 'k': [], # - keyword, built-in version, scope statement
-                    # 'f': [], # - function or method
-                    # 'g': [], # - enum name
-                    # 'e': [], # - enum member
-                    # 'P': [], # - package name
-                    # 'M': [], # - module name
-                    # 'a': [], # - array
-                    # 'A': [], # - associative array
-                    # 'l': [], # - alias name
-                    # 't': [], # - template name
-                    # 'T': [], # - mixin template name
-            # }
         if result[0] == "identifiers":
             return self.identifiers_from_result(result)
         elif result[0] ==  "calltips":
@@ -85,6 +82,8 @@ class Source(Base):
         out = []
         sep = ' '
 
+        candidates = []
+        longest_class_length = 0
         for complete in result[1:]:
             if complete.strip() == '':
                 continue
@@ -92,18 +91,27 @@ class Source(Base):
             pieces = complete.split("\t")
             if len(pieces) < 2:
                 raise Exception(pieces)
+
+            candidates.append(pieces)
+
+            class_len = len(self.class_dict[pieces[1]])
+
+            if class_len > longest_class_length:
+                longest_class_length = class_len
+
+        for pieces in candidates:
             word = pieces[0]
-            _class = pieces[1]
-            abbr = word
+            _class = self.class_dict[pieces[1]]
+            abbr = _class.ljust(longest_class_length + 1) + word
             info = _class
 
-            candidates = dict(word=word,
+            candidate = dict(word=word,
                               abbr=abbr,
                               info=info,
                               dup=1
                               )
 
-            out.append(candidates)
+            out.append(candidate)
 
         return out
 
