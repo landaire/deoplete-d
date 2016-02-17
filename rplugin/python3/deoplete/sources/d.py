@@ -8,13 +8,9 @@ from .base import Base
 from deoplete.util import charpos2bytepos
 from deoplete.util import error
 
-try:
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    ujson_dir = os.path.dirname(current_dir)
-    sys.path.insert(0, ujson_dir)
-    from ujson import loads
-except ImportError:
-    from json import loads
+current_dir = os.path.dirname(os.path.abspath(__file__))
+ujson_dir = os.path.dirname(current_dir)
+sys.path.insert(0, ujson_dir)
 
 
 class Source(Base):
@@ -43,69 +39,72 @@ class Source(Base):
             charpos2bytepos(self.vim, context['input'][: column], column) - 1
         source = '\n'.join(buf).encode()
 
-        process = subprocess.Popen([self.GoCodeBinary(),
-                                    '-f=json',
-                                    'autocomplete',
-                                    buf.name,
-                                    str(offset)],
+        process = subprocess.Popen([self.DcdClientBinary(),
+                                    '-c' + str(offset),
+                                    buf.name,],
                                    stdin=subprocess.PIPE,
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE,
                                    start_new_session=True)
         process.stdin.write(source)
         stdout_data, stderr_data = process.communicate()
-        result = loads(stdout_data.decode())
+        result = stdout_data.decode().split('\n')
 
-        if not self.sort_class == []:
-            # TODO(zchee): Why not work with this?
-            #              class_dict = {}.fromkeys(self.sort_class, [])
-            class_dict = {
-                'package': [],
-                'func': [],
-                'type': [],
-                'var': [],
-                'const': [],
-            }
-        try:
-            out = []
-            sep = ' '
-            for complete in result[1]:
-                _class = complete['class']
-                word = complete['name']
-                info = complete['type']
+        # if not self.sort_class == []:
+            # # TODO(zchee): Why not work with this?
+            # #              class_dict = {}.fromkeys(self.sort_class, [])
+            # class_dict = {
+                    # 'c': [], # - class name
+                    # 'i': [], # - interface name
+                    # 's': [], # - struct name
+                    # 'u': [], # - union name
+                    # 'v': [], # - variable name
+                    # 'm': [], # - member variable name
+                    # 'k': [], # - keyword, built-in version, scope statement
+                    # 'f': [], # - function or method
+                    # 'g': [], # - enum name
+                    # 'e': [], # - enum member
+                    # 'P': [], # - package name
+                    # 'M': [], # - module name
+                    # 'a': [], # - array
+                    # 'A': [], # - associative array
+                    # 'l': [], # - alias name
+                    # 't': [], # - template name
+                    # 'T': [], # - mixin template name
+            # }
+        if result[0] == "identifiers":
+            return self.identifiers_from_result(result)
 
-                if not _class == 'package' and self.align_class:
-                    abbr = '{:<6}'.format(_class) + word
-                else:
-                    abbr = _class + sep + word
+        return []
 
-                if _class == 'package' and self.package_dot:
-                    word += '.'
-                if _class == 'func':
-                    word = word + '('
-                    abbr += str(info).strip('func')
-                elif _class in ('type', 'var'):
-                    abbr += sep + info
-
-                candidates = dict(word=word,
-                                  abbr=abbr,
-                                  info=info,
-                                  dup=1
-                                  )
-                if self.sort_class == []:
-                    out.append(candidates)
-                else:
-                    class_dict[_class].append(candidates)
-
-            # append with sort by complete['class']
-            if not self.sort_class == []:
-                for c in self.sort_class:
-                    for x in class_dict[c]:
-                        out.append(x)
-
+    def identifiers_from_result(self, result):
+        out = []
+        sep = ' '
+        # We didn't get identifiers for some reason
+        if result[0] != "identifiers":
             return out
-        except Exception:
-            return []
+
+        for complete in result[1:]:
+            if complete.strip() == '':
+                continue
+
+            pieces = complete.split("\t")
+            if len(pieces) < 2:
+                raise Exception(pieces)
+            word = pieces[0]
+            _class = pieces[1]
+            abbr = word
+            info = _class
+
+            candidates = dict(word=word,
+                              abbr=abbr,
+                              info=info,
+                              dup=1
+                              )
+
+            out.append(candidates)
+
+        return out
 
     def DcdClientBinary(self):
         try:
