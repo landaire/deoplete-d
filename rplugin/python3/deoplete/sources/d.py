@@ -53,7 +53,7 @@ class Source(Base):
 
         buf = self.vim.current.buffer
         offset = self.vim.call('line2byte', line) + \
-            charpos2bytepos(self.vim, context['input'][: column], column) - 1
+            charpos2bytepos(self.vim, context['input'][: column], column) - 1 
         source = '\n'.join(buf).encode()
 
         process = subprocess.Popen([self.dcd_client_binary(),
@@ -86,6 +86,10 @@ class Source(Base):
             pieces = complete.split("\t")
             if len(pieces) < 2:
                 raise Exception(pieces)
+
+            # asterisk represents an internal (to DCD) type
+            if pieces[1] == "*":
+                continue
 
             candidates.append(pieces)
 
