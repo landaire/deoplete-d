@@ -41,7 +41,7 @@ class Source(Base):
         self._dcd_server_binary = self.vim.vars['deoplete#sources#d#dcd_server_binary']
 
         if self.vim.vars['deoplete#sources#d#dcd_server_autostart'] == 1:
-            process = subprocess.Popen([self.dcd_server_binary()], start_new_session=True)
+            process = subprocess.Popen([self.dcd_server_binary()])
 
     def get_complete_position(self, context):
         m = re.search(r'\w*$', context['input'])
