@@ -1,3 +1,4 @@
+import atexit;
 import os
 import re
 import subprocess
@@ -42,6 +43,7 @@ class Source(Base):
 
         if self.vim.vars['deoplete#sources#d#dcd_server_autostart'] == 1:
             process = subprocess.Popen([self.dcd_server_binary()])
+            atexit.register(lambda: process.kill())
 
     def get_complete_position(self, context):
         m = re.search(r'\w*$', context['input'])
