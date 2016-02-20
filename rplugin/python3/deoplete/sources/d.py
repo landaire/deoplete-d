@@ -60,6 +60,7 @@ class Source(Base):
         buf = self.vim.current.buffer
         offset = self.vim.call('line2byte', line) + \
             charpos2bytepos(self.vim, context['input'][: column], column) - 1
+        offset += len(context['complete_str'])
         source = '\n'.join(buf).encode()
 
         buf_path = os.path.dirname(buf.name);
@@ -69,14 +70,12 @@ class Source(Base):
                 buf_path = buf_path[:buf_path.find(dir) + len(dir)]
                 break
 
-        additional_import = ""
+        args = [self.dcd_client_binary(), "-c" + str(offset)]
         if not buf_path in self.import_dirs:
-            additional_import = "-I{}".format(buf_path)
+            args.append("-I{}".format(buf_path))
             self.import_dirs.append(buf_path)
 
-        process = subprocess.Popen([self.dcd_client_binary(),
-                                    '-c' + str(offset),
-                                    additional_import],
+        process = subprocess.Popen(args,
                                    stdin=subprocess.PIPE,
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE,
@@ -84,6 +83,9 @@ class Source(Base):
         process.stdin.write(source)
         stdout_data, stderr_data = process.communicate()
         result = stdout_data.decode().split('\n')
+
+        if stderr_data != b'':
+            raise Exception((args, stderr_data.decode()))
 
         if result[0] == "identifiers":
             return self.identifiers_from_result(result)
