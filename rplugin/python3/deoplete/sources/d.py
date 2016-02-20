@@ -10,6 +10,9 @@ from deoplete.util import charpos2bytepos
 from deoplete.util import error
 
 class Source(Base):
+    SRC_DIR = "{0}src{0}".format(os.pathsep)
+    SOURCE_DIR = "{0}source{0}".format(os.pathsep)
+
     def __init__(self, vim):
         Base.__init__(self, vim)
 
@@ -40,6 +43,7 @@ class Source(Base):
 
         self._dcd_client_binary = self.vim.vars['deoplete#sources#d#dcd_client_binary']
         self._dcd_server_binary = self.vim.vars['deoplete#sources#d#dcd_server_binary']
+        self.import_dirs = []
 
         if self.vim.vars['deoplete#sources#d#dcd_server_autostart'] == 1:
             process = subprocess.Popen([self.dcd_server_binary()])
@@ -55,11 +59,24 @@ class Source(Base):
 
         buf = self.vim.current.buffer
         offset = self.vim.call('line2byte', line) + \
-            charpos2bytepos(self.vim, context['input'][: column], column) - 1 
+            charpos2bytepos(self.vim, context['input'][: column], column) - 1
         source = '\n'.join(buf).encode()
 
+        buf_path = os.path.dirname(buf.name);
+
+        for dir in [self.SRC_DIR, self.SOURCE_DIR]:
+            if dir in buf_path:
+                buf_path = buf_path[:buf_path.find(dir) + len(dir)]
+                break
+
+        additional_import = ""
+        if not buf_path in self.import_dirs:
+            additional_import = "-I{}".format(buf_path)
+            self.import_dirs.append(buf_path)
+
         process = subprocess.Popen([self.dcd_client_binary(),
-                                    '-c' + str(offset)],
+                                    '-c' + str(offset),
+                                    additional_import],
                                    stdin=subprocess.PIPE,
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE,
