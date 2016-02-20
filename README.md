@@ -26,4 +26,4 @@ should be auto-started
 
 ## Preview
 
-![deoplete-d preview](http://i.imgur.com/8UH5SxS.gif)
+[Gfycat](https://gfycat.com/ImprobableSecondhandAmericanwarmblood)
