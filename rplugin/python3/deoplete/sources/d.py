@@ -19,7 +19,7 @@ class Source(Base):
         self.name = 'd'
         self.mark = '[d]'
         self.filetypes = ['d']
-        self.input_pattern = r'(?:\b[^\W\d]\w*|[\]\)])(?:\.(?:[^\W\d]\w*)?)*'
+        self.input_pattern = r'(?:\b[^\W\d]\w*|[\]\)])(?:\.(?:[^\W\d]\w*)?)*\(?'
         self.rank = 500
         self.class_dict = {
             'c': 'class', # - class name
@@ -138,18 +138,29 @@ class Source(Base):
     def calltips_from_result(self, result):
         out = []
 
-        result = result[1]
+        result = result[1:]
+        for calltip in result:
+            candidate = dict(
+                abbr=calltip,
+                word=self.parse_function_parameters(calltip),
+                info=calltip
+            )
 
-        word = result.split(" ")
-        word = word[1]
-        word = word[:word.find('(')]
-
-        out.append(dict(
-                word=word,
-                info=result
-            ))
+            out.append(candidate)
 
         return out
+
+    def parse_function_parameters(self, decl):
+        """Parses the function parameters from a function decl, returns them as a string"""
+        last_lparen = decl.rfind('(')
+        last_rparen = decl.rfind(')')
+
+        param_list = decl[last_lparen + 1 : last_rparen]
+        param_list = param_list.split(' ')
+        # take only the names
+        param_list = param_list[1::2]
+
+        return ''.join(param_list)
 
     def dcd_client_binary(self):
         try:
