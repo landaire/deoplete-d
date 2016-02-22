@@ -160,7 +160,7 @@ class Source(Base):
         # take only the names
         param_list = param_list[1::2]
 
-        return ''.join(param_list)
+        return ' '.join(param_list)
 
     def dcd_client_binary(self):
         try:
