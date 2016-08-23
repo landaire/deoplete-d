@@ -21,6 +21,9 @@ on your system. This is optional and will be found in your `$PATH` if not set
 `let g:deoplete#sources#d#dcd_server_binary = ''` location of the `dcd-server`
 on your system. This is optional and will be found in your `$PATH` if not set
 
+`let g:deoplete#sources#d#dub_binary = ''` location of `dub`
+on your system. This is optional and will be found in your `$PATH` if not set
+
 `let g:deoplete#sources#d#dcd_server_autostart = 1` - whether or not `dcd-server`
 should be auto-started
 
