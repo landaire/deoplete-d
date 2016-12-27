@@ -65,17 +65,17 @@ class Source(Base):
         offset += len(context['complete_str'])
         source = '\n'.join(buf).encode()
 
-        buf_path = os.path.dirname(buf.name);
-
-        for dir in [self.SRC_DIR, self.SOURCE_DIR]:
-            if dir in buf_path:
-                buf_path = buf_path[:buf_path.find(dir) + len(dir)]
-                break
-
         args = [self.dcd_client_binary(), "-c" + str(offset)]
-        if not buf_path in self.import_dirs:
-            args.append("-I{}".format(buf_path))
-            self.import_dirs.append(buf_path)
+
+        if buf.name != "":
+            buf_path = os.path.dirname(buf.name);
+            for dir in [self.SRC_DIR, self.SOURCE_DIR]:
+                if dir in buf_path:
+                    buf_path = buf_path[:buf_path.find(dir) + len(dir)]
+                    break
+            if not buf_path in self.import_dirs:
+                args.append("-I{}".format(buf_path))
+                self.import_dirs.append(buf_path)
 
         process = subprocess.Popen(args,
                                    stdin=subprocess.PIPE,
