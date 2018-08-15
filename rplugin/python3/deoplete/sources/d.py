@@ -1,8 +1,7 @@
-import atexit;
+import atexit
 import os
 import re
 import subprocess
-import sys
 
 from .base import Base
 
@@ -44,9 +43,6 @@ class Source(Base):
         self._dcd_client_binary = self.vim.vars['deoplete#sources#d#dcd_client_binary']
         self._dcd_server_binary = self.vim.vars['deoplete#sources#d#dcd_server_binary']
         self.import_dirs = []
-
-        self
-
         if self.vim.vars['deoplete#sources#d#dcd_server_autostart'] == 1 and self.dcd_server_binary() is not None:
             process = subprocess.Popen([self.dcd_server_binary()])
             atexit.register(lambda: process.kill())
@@ -54,6 +50,33 @@ class Source(Base):
     def get_complete_position(self, context):
         m = re.search(r'\w*$', context['input'])
         return m.start() if m else -1
+
+    def dub_list_unique(self):
+        """Get unique list of dub packages
+
+        If multiple versions are installed, the highest tag is picked
+        by a string comparrison, ex: "0.2" > "0.1".
+
+        If dub isn't on PATH return an empty list."""
+        try:
+            cmd = ["dub", "list"]
+            res = subprocess.check_output(
+                cmd, universal_newlines=True).split("\n")
+            packages = {}
+            for path in res:
+                if os.path.sep in path:
+                    pkg, tag, dir_name = path.split()
+                    if packages.get(pkg):
+                        if packages[pkg]["tag"] < tag:
+                            packages[pkg] = {"tag": tag, "dir": dir_name}
+                    else:
+                        packages[pkg] = {"tag": tag, "dir": dir_name}
+            if packages:
+                return [v["dir"] for _, v in packages.items()]
+            else:
+                return []
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return []
 
     def gather_candidates(self, context):
         line = self.vim.current.window.cursor[0]
@@ -68,14 +91,16 @@ class Source(Base):
         args = [self.dcd_client_binary(), "-c" + str(offset)]
 
         if buf.name != "":
-            buf_path = os.path.dirname(buf.name);
+            buf_path = os.path.dirname(buf.name)
             for dir in [self.SRC_DIR, self.SOURCE_DIR]:
                 if dir in buf_path:
                     buf_path = buf_path[:buf_path.find(dir) + len(dir)]
                     break
-            if not buf_path in self.import_dirs:
+            if buf_path not in self.import_dirs:
                 args.append("-I{}".format(buf_path))
                 self.import_dirs.append(buf_path)
+            for imp_dir in self.dub_list_unique():
+                args.append("-I{}".format(imp_dir))
 
         process = subprocess.Popen(args,
                                    stdin=subprocess.PIPE,
@@ -91,14 +116,13 @@ class Source(Base):
 
         if result[0] == "identifiers":
             return self.identifiers_from_result(result)
-        elif result[0] ==  "calltips":
+        elif result[0] == "calltips":
             return self.calltips_from_result(result)
 
         return []
 
     def identifiers_from_result(self, result):
         out = []
-        sep = ' '
 
         candidates = []
         longest_class_length = 0
@@ -157,7 +181,7 @@ class Source(Base):
         last_lparen = decl.rfind('(')
         last_rparen = decl.rfind(')')
 
-        param_list = decl[last_lparen + 1 : last_rparen]
+        param_list = decl[last_lparen + 1: last_rparen]
         param_list = param_list.split(' ')
         # take only the names
         param_list = param_list[1::2]
