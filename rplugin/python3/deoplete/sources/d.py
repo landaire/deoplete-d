@@ -1,8 +1,7 @@
-import atexit;
+import atexit
 import os
 import re
 import subprocess
-import sys
 
 from .base import Base
 
@@ -44,9 +43,6 @@ class Source(Base):
         self._dcd_client_binary = self.vim.vars['deoplete#sources#d#dcd_client_binary']
         self._dcd_server_binary = self.vim.vars['deoplete#sources#d#dcd_server_binary']
         self.import_dirs = []
-
-        self
-
         if self.vim.vars['deoplete#sources#d#dcd_server_autostart'] == 1 and self.dcd_server_binary() is not None:
             process = subprocess.Popen([self.dcd_server_binary()])
             atexit.register(lambda: process.kill())
@@ -68,12 +64,12 @@ class Source(Base):
         args = [self.dcd_client_binary(), "-c" + str(offset)]
 
         if buf.name != "":
-            buf_path = os.path.dirname(buf.name);
+            buf_path = os.path.dirname(buf.name)
             for dir in [self.SRC_DIR, self.SOURCE_DIR]:
                 if dir in buf_path:
                     buf_path = buf_path[:buf_path.find(dir) + len(dir)]
                     break
-            if not buf_path in self.import_dirs:
+            if buf_path not in self.import_dirs:
                 args.append("-I{}".format(buf_path))
                 self.import_dirs.append(buf_path)
 
@@ -91,14 +87,13 @@ class Source(Base):
 
         if result[0] == "identifiers":
             return self.identifiers_from_result(result)
-        elif result[0] ==  "calltips":
+        elif result[0] == "calltips":
             return self.calltips_from_result(result)
 
         return []
 
     def identifiers_from_result(self, result):
         out = []
-        sep = ' '
 
         candidates = []
         longest_class_length = 0
@@ -157,7 +152,7 @@ class Source(Base):
         last_lparen = decl.rfind('(')
         last_rparen = decl.rfind(')')
 
-        param_list = decl[last_lparen + 1 : last_rparen]
+        param_list = decl[last_lparen + 1: last_rparen]
         param_list = param_list.split(' ')
         # take only the names
         param_list = param_list[1::2]
