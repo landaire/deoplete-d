@@ -51,6 +51,33 @@ class Source(Base):
         m = re.search(r'\w*$', context['input'])
         return m.start() if m else -1
 
+    def dub_list_unique(self):
+        """Get unique list of dub packages
+
+        If multiple versions are installed, the highest tag is picked
+        by a string comparrison, ex: "0.2" > "0.1".
+
+        If dub isn't on PATH return an empty list."""
+        try:
+            cmd = ["dub", "list"]
+            res = subprocess.check_output(
+                cmd, universal_newlines=True).split("\n")
+            packages = {}
+            for path in res:
+                if os.path.sep in path:
+                    pkg, tag, dir_name = path.split()
+                    if packages.get(pkg):
+                        if packages[pkg]["tag"] < tag:
+                            packages[pkg] = {"tag": tag, "dir": dir_name}
+                    else:
+                        packages[pkg] = {"tag": tag, "dir": dir_name}
+            if packages:
+                return [v["dir"] for _, v in packages.items()]
+            else:
+                return []
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return []
+
     def gather_candidates(self, context):
         line = self.vim.current.window.cursor[0]
         column = context['complete_position']
@@ -72,6 +99,8 @@ class Source(Base):
             if buf_path not in self.import_dirs:
                 args.append("-I{}".format(buf_path))
                 self.import_dirs.append(buf_path)
+            for imp_dir in self.dub_list_unique():
+                args.append("-I{}".format(imp_dir))
 
         process = subprocess.Popen(args,
                                    stdin=subprocess.PIPE,
