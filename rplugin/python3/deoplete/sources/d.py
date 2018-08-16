@@ -88,7 +88,7 @@ class Source(Base):
         offset += len(context['complete_str'])
         source = '\n'.join(buf).encode()
 
-        args = [self.dcd_client_binary(), "-c" + str(offset)]
+        args = [self.dcd_client_binary(), "-x", "-c" + str(offset)]
 
         if buf.name != "":
             buf_path = os.path.dirname(buf.name)
@@ -125,13 +125,13 @@ class Source(Base):
         out = []
 
         candidates = []
-        longest_class_length = 0
+        longest_width = 0
         for complete in result[1:]:
             if complete.strip() == '':
                 continue
 
             pieces = complete.split("\t")
-            if len(pieces) < 2:
+            if len(pieces) < 5:
                 raise Exception(pieces)
 
             # asterisk represents an internal (to DCD) type
@@ -141,14 +141,18 @@ class Source(Base):
             candidates.append(pieces)
 
             class_len = len(self.class_dict[pieces[1]])
-
-            if class_len > longest_class_length:
-                longest_class_length = class_len
+            signature_len = len(pieces[2])
+            for size in [class_len, signature_len]:
+                if size > longest_width:
+                    longest_width = size
 
         for pieces in candidates:
             word = pieces[0]
             _class = self.class_dict[pieces[1]]
-            abbr = _class.ljust(longest_class_length + 1) + word
+            if pieces[2]:
+                abbr = pieces[2].ljust(longest_width + 1) + _class
+            else:
+                abbr = word.ljust(longest_width + 1) + _class
             info = _class
 
             candidate = dict(word=word,
@@ -221,4 +225,3 @@ class Source(Base):
                 if is_exec(binary):
                     return binary
         return error(self.vim, cmd + ' binary not found')
-
